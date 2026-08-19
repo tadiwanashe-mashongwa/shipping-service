@@ -18,4 +18,25 @@ class ShipmentTest {
         assertThat(shipment.getCustomerId()).isEqualTo(customerId);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.PENDING);
     }
+
+    @Test
+    void dispatchesPendingShipmentWithCarrierAndTrackingNumber() {
+        Shipment shipment = Shipment.create(UUID.randomUUID(), UUID.randomUUID());
+
+        shipment.dispatch("DHL", "TRACK-123");
+
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.DISPATCHED);
+        assertThat(shipment.getCarrier()).isEqualTo("DHL");
+        assertThat(shipment.getTrackingNumber()).isEqualTo("TRACK-123");
+    }
+
+    @Test
+    void deliversDispatchedShipment() {
+        Shipment shipment = Shipment.create(UUID.randomUUID(), UUID.randomUUID());
+        shipment.dispatch("DHL", "TRACK-123");
+
+        shipment.deliver();
+
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
+    }
 }

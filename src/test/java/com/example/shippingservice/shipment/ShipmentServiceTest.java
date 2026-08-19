@@ -3,6 +3,7 @@ package com.example.shippingservice.shipment;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,5 +38,16 @@ class ShipmentServiceTest {
 
         assertThat(shipment).isSameAs(existing);
         verify(shipments, never()).save(any());
+    }
+
+    @Test
+    void listsShipmentsForOneCustomer() {
+        UUID customerId = UUID.randomUUID();
+        ShipmentRepository shipments = mock(ShipmentRepository.class);
+        Shipment shipment = Shipment.create(UUID.randomUUID(), customerId);
+        when(shipments.findByCustomerId(customerId)).thenReturn(List.of(shipment));
+        ShipmentService service = new ShipmentService(shipments);
+
+        assertThat(service.listForCustomer(customerId)).containsExactly(shipment);
     }
 }

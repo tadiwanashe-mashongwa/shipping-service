@@ -25,4 +25,20 @@ class ShipmentControllerTest {
         assertThat(response).hasSize(1);
         verify(service).listForCustomer(customerId);
     }
+
+    @Test
+    void dispatchesShipmentForAdministrator() {
+        UUID orderId = UUID.randomUUID();
+        UUID customerId = UUID.randomUUID();
+        Shipment shipment = Shipment.create(orderId, customerId);
+        shipment.dispatch("DHL", "TRACK-123");
+        ShipmentService service = mock(ShipmentService.class);
+        when(service.dispatch(orderId, "DHL", "TRACK-123")).thenReturn(shipment);
+        ShipmentController controller = new ShipmentController(service);
+
+        ShipmentResponse response = controller.dispatch(orderId, new DispatchShipmentRequest("DHL", "TRACK-123"));
+
+        assertThat(response.status()).isEqualTo(ShipmentStatus.DISPATCHED);
+        verify(service).dispatch(orderId, "DHL", "TRACK-123");
+    }
 }

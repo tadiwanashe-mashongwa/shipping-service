@@ -21,4 +21,21 @@ public class ShipmentService {
     public List<Shipment> listForCustomer(UUID customerId) {
         return shipments.findByCustomerId(customerId);
     }
+
+    public Shipment dispatch(UUID orderId, String carrier, String trackingNumber) {
+        Shipment shipment = findByOrderId(orderId);
+        shipment.dispatch(carrier, trackingNumber);
+        return shipments.save(shipment);
+    }
+
+    public Shipment deliver(UUID orderId) {
+        Shipment shipment = findByOrderId(orderId);
+        shipment.deliver();
+        return shipments.save(shipment);
+    }
+
+    private Shipment findByOrderId(UUID orderId) {
+        return shipments.findByOrderId(orderId)
+                .orElseThrow(() -> new ShipmentNotFoundException(orderId));
+    }
 }

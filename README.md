@@ -68,7 +68,29 @@ erDiagram
     }
 ```
 
-## API
+## Local run
+
+Run the complete SpareLink stack from the parent platform repository:
+
+```powershell
+docker compose up --build -d
+```
+
+| Resource | URL |
+|---|---|
+| Shipping API | `http://localhost:8086` |
+| Health | `http://localhost:8086/actuator/health` |
+| OpenAPI JSON | `http://localhost:8086/v3/api-docs` |
+| Swagger UI | `http://localhost:8086/swagger-ui/index.html` |
+| Keycloak | `http://localhost:8080` |
+
+For service-only development, configure PostgreSQL database `shipping_db`, Kafka and `KEYCLOAK_ISSUER_URI`, then run:
+
+```powershell
+mvn spring-boot:run
+```
+
+## API and access control
 
 | Endpoint | Access | Purpose |
 |---|---|---|
@@ -77,7 +99,9 @@ erDiagram
 | `POST /api/shipments/{orderId}/deliver` | `ADMIN` | Mark a dispatched shipment as delivered |
 | `GET /actuator/health` | Public | Liveness/health check |
 
-Dispatch request:
+Health and OpenAPI endpoints are public. Keycloak bearer tokens are required for API calls.
+
+Dispatch request body:
 
 ```json
 {
@@ -86,31 +110,57 @@ Dispatch request:
 }
 ```
 
-Swagger UI: `http://localhost:8086/swagger-ui/index.html`
-
 ## Security and ownership
 
 `GET /api/shipments/me` takes its customer identity from `JWT.sub`; clients cannot provide a customer ID. Keycloak realm roles are mapped to Spring `ROLE_CUSTOMER` and `ROLE_ADMIN`. Administrative lifecycle actions are denied to customers.
 
-## Running locally
+## Events
 
-```powershell
-mvn test
-mvn spring-boot:run
+| Direction | Topic | Event | Behaviour |
+|---|---|---|---|
+| Consumed | `order-created` | Order-created JSON | Records the order/customer shipping context; unknown event fields are intentionally ignored for forward compatibility. |
+| Consumed | `payment-status-changed` | Payment-status-changed JSON | Creates a shipment only when status is `SUCCESS`. |
+
+## Reliability and idempotency
+
+```mermaid
+flowchart TD
+    A[order-created] --> B[Persist order/customer context]
+    C[payment-status-changed SUCCESS] --> D{Shipment already exists?}
+    D -->|Yes| E[Return existing shipment]
+    D -->|No| F[Create PENDING shipment]
+    B --> G[Shipping order context retained]
 ```
 
-The default local database is `shipping_db` on PostgreSQL port `5432`. In the platform stack, use Docker Compose from the parent `SpareLink` directory; the service is exposed on port `8086`.
+The service treats duplicate successful-payment events safely: `order_id` is unique in `shipments`, and the application checks for an existing shipment before it inserts one. This is necessary because Kafka delivery is at-least-once.
 
 ## Testing strategy
 
-The TDD suite covers domain transition rules, idempotent paid-order shipment creation, Kafka JSON listener contracts, customer ownership, admin authorization, controller mapping, and PostgreSQL/JPA/Flyway persistence through Testcontainers.
+The test suite follows TDD and uses the smallest realistic layer for each behaviour:
 
-Run the full suite with `mvn test`. JaCoCo HTML reports are generated at `target/site/jacoco/index.html`; GitHub Actions publishes the coverage badge on pushes to `main`.
+| Layer | Scope |
+|---|---|
+| Unit | Shipment transitions, idempotency, dispatch/delivery service rules, Kafka listener contracts |
+| MVC slice | Controller mapping and JWT customer/admin authorization |
+| JPA slice | Real PostgreSQL repository persistence and Flyway migrations |
+| Platform smoke test | Real local Kafka `order-created → payment-status-changed SUCCESS → PENDING shipment` flow |
+
+Run everything locally:
+
+```powershell
+mvn test
+```
+
+The JaCoCo HTML report is generated at `target/site/jacoco/index.html`.
 
 ## Project structure
 
 ```text
-shipment/  domain, services, Kafka listeners, REST API and persistence
-config/    Keycloak security and OpenAPI configuration
-db/        Flyway migrations
+src/main/java/com/example/shippingservice
+├── shipment      domain, services, Kafka listeners, REST API and persistence
+├── config        Keycloak security and OpenAPI configuration
+└── ...
+
+src/main/resources
+└── db/migration  Flyway migrations
 ```

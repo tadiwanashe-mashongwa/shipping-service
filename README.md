@@ -153,6 +153,12 @@ mvn test
 
 The JaCoCo HTML report is generated at `target/site/jacoco/index.html`.
 
+## API screenshot
+
+Swagger UI from the running secured service:
+
+![SpareLink Shipping Service Swagger UI](docs/images/swagger-ui.png)
+
 ## Project structure
 
 ```text

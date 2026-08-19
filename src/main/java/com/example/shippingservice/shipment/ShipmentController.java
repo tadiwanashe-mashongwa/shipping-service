@@ -1,5 +1,6 @@
 package com.example.shippingservice.shipment;
 
+import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -31,7 +32,7 @@ public class ShipmentController {
     @PostMapping("/{orderId}/dispatch")
     public ShipmentResponse dispatch(
             @PathVariable UUID orderId,
-            @RequestBody DispatchShipmentRequest request
+            @Valid @RequestBody DispatchShipmentRequest request
     ) {
         return ShipmentResponse.from(service.dispatch(orderId, request.carrier(), request.trackingNumber()));
     }

@@ -32,4 +32,13 @@ class ShipmentSecurityTest {
                         .content("{\"carrier\":\"DHL\",\"trackingNumber\":\"TRACK-123\"}"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void rejectsDispatchRequestWithoutCarrierAndTrackingNumber() throws Exception {
+        mvc.perform(post("/api/shipments/" + java.util.UUID.randomUUID() + "/dispatch")
+                        .contentType("application/json")
+                        .content("{\"carrier\":\"\",\"trackingNumber\":\"\"}"))
+                .andExpect(status().isBadRequest());
+    }
 }

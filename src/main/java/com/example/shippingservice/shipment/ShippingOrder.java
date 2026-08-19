@@ -29,4 +29,5 @@ public class ShippingOrder {
     public UUID getOrderId() { return orderId; }
     public UUID getCustomerId() { return customerId; }
     public boolean isPaymentConfirmed() { return paymentConfirmed; }
+    public void confirmPayment() { this.paymentConfirmed = true; }
 }
